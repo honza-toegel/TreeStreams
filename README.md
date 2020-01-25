@@ -27,21 +27,20 @@ assertEquals(2, treeStreamA.leafCount())
 ```
 
 ### Transform to another tree
+  Input:         Output:
+    1      =>     "2"
+   / \           /  \
+  2   3        "3"  "4"
+
+
 ```kotlin
 class TreeItemB (val text:String, val children: List<TreeItemB> = emptyList())
 
-    /**
-     *    1      =>     "2"
-     *   / \           /  \
-     *   2  3        "3"  "4"
-     */
+val treeStreamB = treeStreamA.mapTreePostOrder<PreOrderTreeItemB> { node, children ->  PreOrderTreeItemB("${node.number + 1}", children) }.toStream { it.children }
 
-        val treeStreamB = treeStreamA.mapTreePostOrder<PreOrderTreeItemB> { node, children ->  PreOrderTreeItemB("${node.number + 1}", children) }.toStream { it.children }
-
-        assertEquals(treeStreamA.nodeCount(), treeStreamB.nodeCount())
-        assertEquals(treeStreamA.leafCount(), treeStreamB.leafCount())
-        assertEquals("2", rootB.text)
-        assertEquals("3", rootB.children[0].text)
-        assertEquals("4", rootB.children[1].text)
-    
+assertEquals(treeStreamA.nodeCount(), treeStreamB.nodeCount())
+assertEquals(treeStreamA.leafCount(), treeStreamB.leafCount())
+assertEquals("2", rootB.text)
+assertEquals("3", rootB.children[0].text)
+assertEquals("4", rootB.children[1].text)    
 ```
