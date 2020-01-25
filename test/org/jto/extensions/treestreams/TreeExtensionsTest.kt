@@ -110,8 +110,168 @@ class TreeExtensionsTest {
         }
     }
 
+    class TreeItemA (val number:Int, val children: List<TreeItemA> = emptyList())
+    class TreeItemB (val text:String, val children: List<TreeItemB> = emptyList())
 
-    class TreeItemTest(val colIndex: Int, val leavesCount: Int, val secondParamSum: Int, val children: List<TreeItemTest>)
+    /**
+     * Input:         Output:
+     *     1      =>     "2"
+     *    / \           /  \
+     *   2  3         "3"  "4"
+     *   |             |
+     *   4            "5"
+     */
+    @Test
+    fun mapTreeAToBTest() {
+        val rootA = TreeItemA(1, listOf(TreeItemA(2, listOf(TreeItemA(4))), TreeItemA(3)))
+        val streamA = GenericTreeStream(rootA) {it.children}
+        val streamB = streamA.mapTreePostOrder<TreeItemB> { node, children ->  TreeItemB("${node.number + 1}", children) }.toStream { it.children }
+        val rootB = streamB.rootNode
+
+        assertEquals(streamA.nodeCount(), streamB.nodeCount())
+        assertEquals(streamA.leafCount(), streamB.leafCount())
+        assertEquals("2", rootB.text)
+        assertEquals("3", rootB.children[0].text)
+        assertEquals("5", rootB.children[0].children[0].text)
+        assertEquals("4", rootB.children[1].text)
+    }
+
+    /**
+     * Input:         Output:
+     *     1      =>    1
+     *    / \          /
+     *   2  3         2
+     *   |
+     *   4
+     */
+    @Test
+    fun filterTreeATest() {
+        val rootA = TreeItemA(1, listOf(TreeItemA(2, listOf(TreeItemA(4))), TreeItemA(3)))
+        val streamA = GenericTreeStream(rootA) {it.children}
+        val streamB = streamA.filterTreePostOrder({node,children -> TreeItemA(node.number,children)}, predicate = {node ->  node.number < 3})
+        val rootB = streamB.rootNode
+
+        assertEquals(2, streamB.nodeCount())
+        assertEquals(1, streamB.leafCount())
+        assertEquals(1, rootB.number)
+        assertEquals(2, rootB.children[0].number)
+    }
+
+    /**
+     * Input:         Output:
+     *     1      =>    1
+     *    / \          /
+     *   2  3         2
+     */
+    @Test
+    fun filterUsingMapTreeATest() {
+        val rootA = TreeItemA(1, listOf(TreeItemA(2), TreeItemA(3)))
+        val streamA = GenericTreeStream(rootA) {it.children}
+        val streamB = streamA.mapTreePostOrder<TreeItemA>{ node, children -> when(node.number < 3) {
+            true -> TreeItemA(node.number, children)
+            false -> null
+        }}.toStream { it.children }
+        val rootB = streamB.rootNode
+
+        assertEquals(3, streamA.nodeCount())
+        assertEquals(2, streamA.leafCount())
+        assertEquals(2, streamB.nodeCount())
+        assertEquals(1, streamB.leafCount())
+        assertEquals(1, rootB.number)
+        assertEquals(2, rootB.children[0].number)
+    }
+
+
+    /**
+     * Input:
+     *     1
+     *    / \
+     *   2  3
+     *   |
+     *   4
+     *
+     *  Output:
+     *
+     *  Pre order: 1,2,4,3,
+     *  Post order: 4,2,3,1,
+     *  Breadth first order: 1,2,3,4,
+     */
+    @Test
+    fun forEachTreeATest() {
+        val rootA = TreeItemA(1, listOf(TreeItemA(2, listOf(TreeItemA(4))), TreeItemA(3)))
+        val streamA = GenericTreeStream(rootA) {it.children}
+
+        print("Pre order: ")
+        streamA.forEachPreOrder { print("${it.number},") }
+        println()
+        print("Post order: ")
+        streamA.forEachPostOrder { print("${it.number},") }
+        println()
+        print("Breadth first order: ")
+        streamA.forEachBf { print("${it.number},") }
+    }
+
+    /**
+     * Input:
+     *     1
+     *    / \
+     *   2  3
+     *   |
+     *   4
+     *
+     *  Output:
+     *
+     *  nodeCount = 4
+     *  leaveCount = 2
+     *  height = 3
+     */
+    @Test
+    fun flattenTreeATest() {
+        val rootA = TreeItemA(1, listOf(TreeItemA(2, listOf(TreeItemA(4))), TreeItemA(3)))
+        val streamA = GenericTreeStream(rootA) { it.children }
+
+        with(streamA.flatMapTreeBf()) {
+            assertEquals(rootA, this[0])
+            assertEquals(rootA.children[0], this[1])
+            assertEquals(rootA.children[1], this[2])
+            assertEquals(rootA.children[0].children[0], this[3])
+        }
+    }
+
+    /**
+     * Input:
+     *     1
+     *    / \
+     *   2  3
+     *   |
+     *   4
+     *
+     *  Output:
+     *
+     *  nodeCount = 4
+     *  leaveCount = 2
+     *  height = 3
+     */
+    @Test
+    fun attributesTreeATest() {
+        val rootA = TreeItemA(1, listOf(TreeItemA(2, listOf(TreeItemA(4))), TreeItemA(3)))
+        val streamA = GenericTreeStream(rootA) {it.children}
+
+        assertEquals(4, streamA.nodeCount())
+        assertEquals(2, streamA.leafCount())
+        assertEquals(3, streamA.height())
+        with(streamA.nodeDepthsMap()) {
+            assertEquals(0, this[rootA])
+            assertEquals(1, this[rootA.children[0]])
+            assertEquals(2, this[rootA.children[0].children[0]])
+        }
+    }
+
+    class TreeItemTest(
+        val leavesCount: Int,
+        val secondParamSum: Int,
+        val children: List<TreeItemTest>
+    )
 
 
     @Test
@@ -123,13 +283,14 @@ class TreeExtensionsTest {
         val a00 = TreeItem("00" to 0).apply { children.addAll(rootChildren) }
 
         val resultTree = GenericTreeStream<TreeItem<Pair<String, Int>>>(a00, { it.children }).mapTreePostOrderIndexed<TreeItemTest, Int>(
-                transform = { it, _, children, postOrderIndex ->
-                    TreeItemTest(colIndex = postOrderIndex,
-                            leavesCount = maxOf(children.map { it.leavesCount }.sum(), 1),
-                            secondParamSum = when (children.isEmpty()) {
-                                true -> it.value.second; false -> children.map { it.secondParamSum }.sum()
-                            },
-                            children = children)
+                transform = { it, _, children, _ ->
+                    TreeItemTest(
+                        leavesCount = maxOf(children.map { it.leavesCount }.sum(), 1),
+                        secondParamSum = when (children.isEmpty()) {
+                            true -> it.value.second; false -> children.map { it.secondParamSum }.sum()
+                        },
+                        children = children
+                    )
                 }, initialIndex = 0, postOrderIndex = { it, _, _ -> it + 1 })
 
 
