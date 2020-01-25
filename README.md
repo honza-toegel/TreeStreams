@@ -8,38 +8,40 @@ class TreeItemA (val number:Int, val children: List<TreeItemA> = emptyList())
 /**
  *    1     
  *   / \
- *   2  3
+ *  2   3
  */
-val rootA = PreOrderTreeItemA(1, listOf(PreOrderTreeItemA(2), PreOrderTreeItemA(3)))
+val rootA = TreeItemA(1, listOf(TreeItemA(2), TreeItemA(3)))
 ```
 
 ### Define tree stream
 
 ```kotlin
-val treeStreamA = GenericTreeStream(rootA) {it.children}
+val streamA = GenericTreeStream(rootA) {it.children}
 ```
 
 ### Check base characteristics of tree
 
 ```kotlin
-assertEquals(3, treeStreamA.nodeCount())
-assertEquals(2, treeStreamA.leafCount())
+assertEquals(3, streamA.nodeCount())
+assertEquals(2, streamA.leafCount())
 ```
 
 ### Transform to another tree
-  Input:         Output:
-    1      =>     "2"
-   / \           /  \
-  2   3        "3"  "4"
-
-
 ```kotlin
+/**
+ *    Input:         Output:
+ *       1      =>     "2"
+ *      / \           /  \
+ *     2   3        "3"  "4"
+ */
 class TreeItemB (val text:String, val children: List<TreeItemB> = emptyList())
 
-val treeStreamB = treeStreamA.mapTreePostOrder<PreOrderTreeItemB> { node, children ->  PreOrderTreeItemB("${node.number + 1}", children) }.toStream { it.children }
+val streamB = streamA.mapTreePostOrder<PreOrderTreeItemB> { node, children ->  PreOrderTreeItemB("${node.number + 1}", children) }.toStream { it.children }
 
-assertEquals(treeStreamA.nodeCount(), treeStreamB.nodeCount())
-assertEquals(treeStreamA.leafCount(), treeStreamB.leafCount())
+assertEquals(streamA.nodeCount(), streamB.nodeCount())
+assertEquals(streamA.leafCount(), streamB.leafCount())
+
+val rootB = streamB.rootNode
 assertEquals("2", rootB.text)
 assertEquals("3", rootB.children[0].text)
 assertEquals("4", rootB.children[1].text)    
