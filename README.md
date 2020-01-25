@@ -1,7 +1,7 @@
 # TreeStreams
 The goal is to provide clean API for generic tree/forest structures in order to allow transformations, filtering, for-each loops and all basic operations which are expected from tree. In order to read generic tree structures this API requires tree root item and childern function. In order to map tree<T> into new tree<R> the item tranforming function (T, List<R>)->R needs to be provided in order to create item and bound to its children.
  
-### Define tree item class, construct tree
+### Create tree
 
 ```kotlin
 class TreeItemA (val number:Int, val children: List<TreeItemA> = emptyList())
