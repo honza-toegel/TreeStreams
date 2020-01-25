@@ -82,7 +82,7 @@ In order to map tree to another tree, map function is called. The treeMap functi
  */
 class TreeItemB (val text:String, val children: List<TreeItemB> = emptyList())
 
-val streamB = streamA.mapTreePostOrder<PreOrderTreeItemB> { node, children ->  PreOrderTreeItemB("${node.number + 1}", children) }.toStream { it.children }
+val streamB = streamA.mapTreePostOrder<TreeItemB> { node, children ->  TreeItemB("${node.number + 1}", children) }.toStream { it.children }
 
 val rootB = streamB.rootNode
 assertEquals("2", rootB.text)
