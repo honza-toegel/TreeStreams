@@ -5,11 +5,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ForestTest {
-    val intForest = Forest(
-        listOf(
-            Tree(1, listOf(Tree(2), Tree(3, listOf(Tree(4))))),
-            Tree(5)
-        )
+    val intForest = forestOf(
+        treeOf(
+            1,
+            treeOf(2),
+            treeOf(3, Tree(4))
+        ),
+        treeOf(5)
     )
 
     @Test
@@ -23,7 +25,7 @@ class ForestTest {
 
     @Test
     fun mapPreOrderIntToString() {
-        val stringForest = intForest.mapPreOrder<String>{ node, _ ->  "${node.value + 1}"}
+        val stringForest = intForest.mapPreOrder<String> { node, _ -> "${node.value + 1}" }
 
         with(stringForest) {
             assertEquals(2, nodes.size)

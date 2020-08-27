@@ -2,33 +2,22 @@ package org.jto.extensions.treestreams
 
 import java.lang.StringBuilder
 
-/*open class Forest<T>(
-    val nodes: List<Tree<T>>
-) {
-
-    fun <R> mapPreOrder(transform: (node: Tree<T>, transformedParentValue: R?) -> R): Forest<R> =
-        Forest(mapPreOrder(nodes, transform))
-
-    fun <R> mapPostOrder(transform: (node: Tree<T>, transformedChildren: List<Tree<R>>) -> R): Forest<R> =
-        Forest(mapPostOrder(nodes, transform))
-
-    fun <R, I> mapPostOrderIndexed(
-        initialIndex: I,
-        transform: (node: Tree<T>, index: I, transformedChildren: List<Tree<R>>) -> R,
-        preOrderIndex: (traversalIndex: I, node: Tree<T>) -> I,
-        postOrderIndex: (traversalIndex: I, node: Tree<T>) -> I
-    ): List<Tree<R>> = mapIndexedPostOrder(nodes, initialIndex, transform, preOrderIndex, postOrderIndex)
-
-    fun <R, I> mapBfNodesIndexed(
-        initialIndex: I,
-        nodeTransform: (index: I, node: Tree<T>) -> R?,
-        nextItemIndexTransform: (index: I, node: Tree<T>) -> I,
-        levelUpIndexTransform: (index: I, node: List<Tree<T>>) -> I
-    ) =
-        mapIndexedBreadthFirst(nodes, initialIndex, nodeTransform, nextItemIndexTransform, levelUpIndexTransform)
-}*/
-
 open class Forest<T>(val nodes: List<Tree<T>>) {
+
+    companion object {
+        /**
+         * Import external tree structure of any type to Forest<T>
+         *     The external structure must provide children function and value extractor
+         */
+        fun<E, T> importFrom(roots:Iterable<E>, children:(E)->Iterable<E>, value:(E) -> T):Forest<T> =
+            Forest(roots.map{ Tree.importFrom(it, children, value) })
+
+        /**
+         * Export Forest<T> to any external tree structure using node creation function of the external tree structure
+         */
+        fun<E, T> exportTo(forest:Forest<T>, createNode:(nodeValue:T, children:List<E>) -> E):List<E> =
+            forest.nodes.map { Tree.exportTo(it, createNode) }
+    }
 
     /**
      * Map Forest<T> -> Forest<R>, keeping tree structure, pre-order
@@ -373,3 +362,6 @@ open class Forest<T>(val nodes: List<Tree<T>>) {
         return outputString.toString()
     }
 }
+
+fun<T> emptyForest() = Forest<T>(emptyList())
+fun<T> forestOf(vararg nodes:Tree<T>) = Forest(nodes.toList())

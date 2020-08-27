@@ -6,7 +6,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class TreeTest {
-    val intTree = Tree(1, listOf(Tree(2), Tree(3, listOf(Tree(4)))))
+    val intTree = treeOf(1,
+        treeOf(2),
+        treeOf(3, Tree(4))
+    )
 
     @Test
     fun basicTreeCharacteristics() {
@@ -148,7 +151,7 @@ class TreeTest {
 
     @Test
     fun modifyChildrenPostOrder() {
-        val modifiedTree = intTree.modifyChildrenPostOrder { node, children ->
+        val modifiedTree = intTree.modifyChildrenPostOrder { _, children ->
             when (children.isEmpty()) {
                 //For leaves (no-children) add new child (11)
                 true -> listOf(Tree(11))

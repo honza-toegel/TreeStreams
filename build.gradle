@@ -26,7 +26,7 @@ bintray {
         licenses = ['Apache-3.0']
         vcsUrl = 'https://github.com/honza-toegel/TreeStreams.git'
         version {
-            name = '1.0-Alpha'
+            name = '1.1-Alpha'
             desc = 'Kotlin library for tree structure transformations, filters, foreach loops in java stream way'
             released  = new Date()
         }
@@ -42,7 +42,7 @@ dependencies {
 }
 
 group = 'org.jto.extensions.treestreams'
-version = '1.0-SNAPSHOT'
+version = '1.1-SNAPSHOT'
 sourceCompatibility = '1.8'
 
 publishing {
@@ -52,7 +52,7 @@ publishing {
             //artifact sourcesJar
             groupId 'org.jto.extensions.treestreams'
             artifactId 'treestreams'
-            version '1.0-Alpha'
+            version '1.1-Alpha'
         }
     }
 }

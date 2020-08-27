@@ -7,6 +7,21 @@ open class Tree<T>(
     val children: List<Tree<T>> = emptyList()
 ) {
 
+    companion object {
+        /**
+         * Import external tree structure of any type to Tree<T>
+         *     The external structure must provide children function and value extractor
+         */
+        fun<E, T> importFrom(root:E, children:(E)->Iterable<E>, value:(E) -> T):Tree<T> =
+            Tree(value(root), children(root).map { importFrom(it, children, value) })
+
+        /**
+         * Export Tree<T> to any external tree structure using node creation function of the external tree structure
+         */
+        fun<E, T> exportTo(root:Tree<T>, createNode:(nodeValue:T, children:List<E>) -> E):E =
+            createNode(root.value, root.children.map { exportTo(it, createNode) })
+    }
+
     /**
      * Map Tree<T> -> Tree<R>, keeping tree structure, pre-order
      */
@@ -342,3 +357,8 @@ open class Tree<T>(
         return outputString.toString()
     }
 }
+
+fun <T> treeOf(value: T) = Tree(value)
+fun <T> treeOf(value: T, vararg children: Tree<T>) =
+    if (children.isEmpty()) treeOf(value)
+    else Tree(value, children.toList())
