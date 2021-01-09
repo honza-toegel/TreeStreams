@@ -1,7 +1,7 @@
 # TreeStreams
 TreeStreams API is used to work with generic tree/forest structures:
 - read only functions:
-  - basic tree parameters (nodeCount, leafCount,...)
+  - basic tree parameters (nodeCount, leafCount, height, width)
   - forEach loops 
   - flattening tree to list
 - transforming functions:
@@ -9,14 +9,10 @@ TreeStreams API is used to work with generic tree/forest structures:
   - tree node filtering (filter)
 
 The API supports both depth-first and breadth-first traversals.
-
-In order to use read functions tree *root node* and *childern function* is required. 
-In order to use transforming functions *node creation function* is additionally required, the notation of tree creation function is dependent on depth-first traversal type.
  
 ### Create tree
 
 ```kotlin
-class TreeItemA (val number:Int, val children: List<TreeItemA> = emptyList())
 /**
  *    1     
  *   / \
@@ -24,53 +20,29 @@ class TreeItemA (val number:Int, val children: List<TreeItemA> = emptyList())
  *  |
  *  4
  */
-val rootA = TreeItemA(1, listOf(TreeItemA(2, listOf(TreeItemA(4))), TreeItemA(3)))
+val intTree = treeOf(1,
+        treeOf(2),
+        treeOf(3, Tree(4))
+    )
 ```
 
-### Define tree stream
-
+### Print tree to standard output
+This function can be used for debugging
 ```kotlin
-val streamA = GenericTreeStream(rootA) {it.children}
+println(intTree)
 ```
+
 
 ### Check basic characteristics of tree
 
 ```kotlin
-assertEquals(4, streamA.nodeCount())
-assertEquals(2, streamA.leafCount())
-assertEquals(3, streamA.height())
-with(streamA.nodeDepthsMap()) {
-  assertEquals(0, this[rootA])
-  assertEquals(1, this[rootA.children[0]])
-  assertEquals(2, this[rootA.children[0].children[0]])
-}
+assertEquals(3, intTree.height())
+assertEquals(2, intTree.width())
+assertEquals(4, intTree.nodeCount())
+assertEquals(2, intTree.leafCount())
 ```
 
-### Flatten tree nodes to list
-```kotlin
-with(streamA.flatMapTreeBf()) {
-  assertEquals(rootA, this[0])
-  assertEquals(rootA.children[0], this[1])
-  assertEquals(rootA.children[1], this[2])
-  assertEquals(rootA.children[0].children[0], this[3])
-}
-```
-
-### Loop over nodes
-```kotlin
-//Pre order: 1,2,4,3,
-streamA.forEachPreOrder { print("${it.number},") }
-
-//Post order: 4,2,3,1,
-streamA.forEachPostOrder { print("${it.number},") }
-
-//Breadth first order: 1,2,3,4,
-streamA.forEachBf { print("${it.number},") }
-```
-
-### Transform to another tree
-In order to map tree to another tree, map function is called. The treeMap functions requires tranformation function as parameter which is used to create transformed tree nodes.
-
+### Map tree of Int nodes to String nodes, pre-order
 ```kotlin
 /**
  *    Input:         Output:
@@ -80,19 +52,110 @@ In order to map tree to another tree, map function is called. The treeMap functi
  *     |             |
  *     4            "5"
  */
-class TreeItemB (val text:String, val children: List<TreeItemB> = emptyList())
+val resultStringTree = intTree.mapPreOrder<String>{node, _ ->  "${node.value + 1}"}
 
-val streamB = streamA.mapTreePostOrder<TreeItemB> { node, children ->  TreeItemB("${node.number + 1}", children) }.toStream { it.children }
+val expectedResultTree = treeOf("2",
+    treeOf("3"),
+    treeOf("4", Tree("5"))
+)
 
-val rootB = streamB.rootNode
-assertEquals("2", rootB.text)
-assertEquals("3", rootB.children[0].text)
-assertEquals("5", rootB.children[0].children[0].text)
-assertEquals("4", rootB.children[1].text)    
+assertEquals(expectedResultTree, resultStringTree)
+```
+### Map tree of Int nodes to String nodes, pre-order, using parent value
+```kotlin
+val resultStringTree = intTree.mapPreOrder<String>{ node, transformedParentValue ->  "${node.value + 1 + (transformedParentValue?.toInt() ?: 0)}"}
+
+val expectedResultTree = treeOf("2",
+    treeOf("5"),
+    treeOf("6", Tree("11"))
+)
+
+assertEquals(expectedResultTree, resultStringTree)
+```
+### Map tree with node index - mapIndexed
+This function is analogical to Collection.mapIndexed, providing tree relevant index 
+```kotlin
+val indexedStringTreePreOrder = intTree.mapIndexedPreOrder<String> { node, index, _ ->  "V:${node.value} NodeIndex=${index.nodeIndex} Depth=${index.depth}"}
+
+assertEquals("""
+└-V:1 NodeIndex=0 Depth=0
+  ├-V:2 NodeIndex=1 Depth=1
+  └-V:3 NodeIndex=2 Depth=1
+    └-V:4 NodeIndex=3 Depth=2""".trimIndent(), indexedStringTreePreOrder.toString())
+
+val indexedStringTreePostOrder = intTree.mapIndexedPostOrder<String> { node, index, _ ->  "V:${node.value} NodeIndex=${index.nodeIndex} Depth=${index.depth} Height=${index.height}"}
+
+assertEquals("""
+└-V:1 NodeIndex=3 Depth=0 Height=2
+  ├-V:2 NodeIndex=0 Depth=1 Height=0
+  └-V:3 NodeIndex=2 Depth=1 Height=1
+    └-V:4 NodeIndex=1 Depth=2 Height=0""".trimIndent(), indexedStringTreePostOrder.toString())
+
+val levelsListsStringBreadthFirst = intTree.flatMapLevelsIndexed{index, node ->  "V:${node.value} NodeIndex=${index.nodeIndex} Depth=${index.depth} Width=${index.width}"}
+
+assertEquals("""[[V:1 NodeIndex=0 Depth=0 Width=0], [V:2 NodeIndex=1 Depth=1 Width=0, V:3 NodeIndex=2 Depth=1 Width=1], [V:4 NodeIndex=3 Depth=2 Width=0]]""",
+    levelsListsStringBreadthFirst.toString())
+```
+
+### Loop over nodes - forEach
+This function is analogical to Collection.forEachIndexed providing tree node index
+```kotlin
+//Expected results of for each (index to value)
+val expectedResults:Queue<Pair<Int, Int>> = LinkedList()
+
+//Pre order looping with index
+expectedResults.addAll(listOf(0 to 1, 1 to 2, 2 to 3, 3 to 4))
+intTree.forEachIndexedPreOrder{ node, index ->
+    val expectedResult = expectedResults.remove()
+    assertEquals(expectedResult.first, index.nodeIndex)
+    assertEquals(expectedResult.second, node.value)
+}
+assertTrue(expectedResults.isEmpty())
+
+//Post order looping with index
+expectedResults.addAll(listOf(0 to 2, 1 to 4, 2 to 3, 3 to 1))
+intTree.forEachIndexedPostOrder{ node, index ->
+    val expectedResult = expectedResults.remove()
+    assertEquals(expectedResult.first, index.nodeIndex)
+    assertEquals(expectedResult.second, node.value)
+}
+assertTrue(expectedResults.isEmpty())
+
+//Breadth first looping with index
+expectedResults.addAll(listOf(0 to 1, 1 to 2, 2 to 3, 3 to 4))
+intTree.forEachIndexedBreadthFirst{ node, index ->
+    val expectedResult = expectedResults.remove()
+    assertEquals(expectedResult.first, index.nodeIndex)
+    assertEquals(expectedResult.second, node.value)
+}
+assertTrue(expectedResults.isEmpty())
+```
+
+### Modify children of the tree
+In order to add/remove children in a stream way you can use modifyChildrenPostOrder
+
+```kotlin
+val modifiedTree = intTree.modifyChildrenPostOrder { _, children ->
+    when (children.isEmpty()) {
+        //For leaves (no-children) add new child with constant value 11
+        true -> listOf(Tree(11))
+        //For nodes with children, keep existing children and add new child having value + 1 of the last existing child
+        false -> children + listOf(Tree(children.last().value + 1)) }
+    }
+
+assertEquals("""
+└-1
+  ├-2
+  | └-11
+  ├-3
+  | ├-4
+  | | └-11
+  | └-5
+  └-4""".trimIndent(), modifiedTree.toString())
 ```
 
 ### Filter tree nodes
-In order to filter tree items, map or filter function can be called. Filter function is returning tree of the same type, require filter predicate and node creation function. 
+Filtering tree nodes in post-order manner using boolean predicate:
 
 ```kotlin
 /**
@@ -103,11 +166,32 @@ In order to filter tree items, map or filter function can be called. Filter func
 *   |
 *   4
 */
-val streamB = streamA.filterTreePostOrder({node,children -> TreeItemA(node.number,children)}, predicate = {node ->  node.number < 3}).toStream { it.children }
+val filteredTree = intTree.filterByPredicatePostOrder { node -> node.value <= 2 }
 
-//Produce same output as filter above
-val streamB = streamA.mapTreePostOrder<TreeItemA>{ node, children -> when(node.number < 3) {
-            true -> TreeItemA(node.number, children)
-            false -> null
-        }}.toStream { it.children }
+assertEquals("""
+└-1
+  └-2
+""".trimIndent(), filteredTree.toString())
+```
+
+Filtering tree by calculated criteria value of given type, 
+The criteria value is calculated in pre/post order manner
+```kotlin
+/**
+* Input:         Output:
+*     1      =>    1
+*    / \          / \
+*   2  3         2  3
+*   | 
+*   4 
+*/
+val filteredTree = intTree.filterByCriteriaPreOrder<Int>(
+    calculateCriteriaValue = { node, parentCriteriaValue ->  node.value * 2 + 1 + (parentCriteriaValue ?: 0)},
+    evaluateCriteria = { criteriaValue ->  criteriaValue <= 15 } )
+
+assertEquals("""
+└-1
+  ├-2
+  └-3
+""".trimIndent(), filteredTree.toString())
 ```

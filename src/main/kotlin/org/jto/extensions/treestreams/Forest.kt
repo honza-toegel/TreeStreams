@@ -19,6 +19,13 @@ open class Forest<T>(val nodes: List<Tree<T>>) {
             forest.nodes.map { Tree.exportTo(it, createNode) }
     }
 
+    override fun equals(other: Any?): Boolean =
+        when(other) {
+            null -> false
+            is Forest<*> -> nodes == other.nodes
+            else -> super.equals(other)
+        }
+
     /**
      * Map Forest<T> -> Forest<R>, keeping tree structure, pre-order
      */

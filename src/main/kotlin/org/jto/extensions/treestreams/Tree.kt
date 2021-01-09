@@ -12,15 +12,22 @@ open class Tree<T>(
          * Import external tree structure of any type to Tree<T>
          *     The external structure must provide children function and value extractor
          */
-        fun<E, T> importFrom(root:E, children:(E)->Iterable<E>, value:(E) -> T):Tree<T> =
+        fun <E, T> importFrom(root: E, children: (E) -> Iterable<E>, value: (E) -> T): Tree<T> =
             Tree(value(root), children(root).map { importFrom(it, children, value) })
 
         /**
          * Export Tree<T> to any external tree structure using node creation function of the external tree structure
          */
-        fun<E, T> exportTo(root:Tree<T>, createNode:(nodeValue:T, children:List<E>) -> E):E =
+        fun <E, T> exportTo(root: Tree<T>, createNode: (nodeValue: T, children: List<E>) -> E): E =
             createNode(root.value, root.children.map { exportTo(it, createNode) })
     }
+
+    override fun equals(other: Any?): Boolean =
+        when (other) {
+            null -> false
+            is Tree<*> -> value == other.value && children == other.children
+            else -> super.equals(other)
+        }
 
     /**
      * Map Tree<T> -> Tree<R>, keeping tree structure, pre-order
@@ -141,7 +148,8 @@ open class Tree<T>(
         fun filterByCriteriaPostOrderRecursive(node: Tree<Pair<T, C>>): Tree<T> =
             Tree<T>(
                 node.value.first,
-                node.children.filter { evaluateCriteria(it.value.second) }.map { filterByCriteriaPostOrderRecursive(it) })
+                node.children.filter { evaluateCriteria(it.value.second) }
+                    .map { filterByCriteriaPostOrderRecursive(it) })
 
         val treeEnrichedByCriteriaValue = mapPostOrder<Pair<T, C>> { node, transformedChildren ->
             Pair(
@@ -162,7 +170,8 @@ open class Tree<T>(
         fun filterByCriteriaPostOrderRecursive(node: Tree<Pair<T, C>>): Tree<T> =
             Tree<T>(
                 node.value.first,
-                node.children.filter { evaluateCriteria(it.value.second) }.map { filterByCriteriaPostOrderRecursive(it) })
+                node.children.filter { evaluateCriteria(it.value.second) }
+                    .map { filterByCriteriaPostOrderRecursive(it) })
 
         val treeEnrichedByCriteriaValue =
             mapPreOrder<Pair<T, C>> { node: Tree<T>, transformedParentValue: Pair<T, C>? ->
@@ -354,7 +363,7 @@ open class Tree<T>(
             }
         }
         prettyPrintRecursive(this, "", children.isNotEmpty())
-        return outputString.toString()
+        return outputString.toString().removeSuffix("\n")
     }
 }
 
