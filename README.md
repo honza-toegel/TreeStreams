@@ -22,7 +22,7 @@ The API supports both depth-first and breadth-first traversals.
  */
 val intTree = treeOf(1,
         treeOf(2),
-        treeOf(3, Tree(4))
+        treeOf(3, treeOf(4))
     )
 ```
 
